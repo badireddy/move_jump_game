@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Platformer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            border: 3px solid #34495e;
+            border-radius: 10px;
+            background: #34495e;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+    
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game variables
+        const player = {
+            x: 50,
+            y: 300,
+            width: 30,
+            height: 30,
+            velocityX: 0,
+            velocityY: 0,
+            speed: 5,
+            jumpPower: 15,
+            isGrounded: false,
+            // Animation variables
+            animationFrame: 0,
+            isMoving: false,
+            isJumping: false,
+            direction: 1, // 1 for right, -1 for left
+            runCycle: 0
+        };
+        
+        let cameraX = 0;
+        let levelWidth = 3000; // Much wider level
+        let score = 0;
+        let gameState = 'playing'; // 'playing', 'gameOver', 'won'
+        let restartDelay = 0;
+        
+        // Function to reset player completely
+        function resetPlayer() {
+            player.x = 50;
+            player.y = 300;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.isGrounded = false;
+            player.animationFrame = 0;
+            player.isMoving = false;
+            player.isJumping = false;
+            player.direction = 1;
+            player.runCycle = 0;
+            cameraX = 0;
+            score = 0;
+            gameState = 'playing';
+            restartDelay = 0;
+            
+            // Clear all keys to prevent auto-movement
+            for (let key in keys) {
+                keys[key] = false;
+            }
+        }
+        
+        // Function to draw animated character
+        function drawCharacter(x, y, isMoving, isJumping, direction, runCycle) {
+            ctx.save();
+            ctx.translate(x + 15, y + 15); // Center of character
+            ctx.scale(direction, 1); // Flip horizontally based on direction
+            
+            // Character color
+            ctx.fillStyle = '#ff6b6b';
+            ctx.strokeStyle = '#d63031';
+            ctx.lineWidth = 2;
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(0, -10, 8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Eyes
+            ctx.fillStyle = '#2d3436';
+            ctx.beginPath();
+            ctx.arc(-3, -12, 2, 0, Math.PI * 2);
+            ctx.arc(3, -12, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Body
+            ctx.fillStyle = '#ff6b6b';
+            ctx.strokeStyle = '#d63031';
+            ctx.beginPath();
+            ctx.moveTo(0, -2);
+            ctx.lineTo(0, 15);
+            ctx.stroke();
+            
+            if (isJumping) {
+                // Jumping pose - arms and legs tucked
+                // Arms
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-8, 5);
+                ctx.moveTo(0, 0);
+                ctx.lineTo(8, 5);
+                ctx.stroke();
+                
+                // Legs
+                ctx.beginPath();
+                ctx.moveTo(0, 15);
+                ctx.lineTo(-5, 25);
+                ctx.moveTo(0, 15);
+                ctx.lineTo(5, 25);
+                ctx.stroke();
+                
+            } else if (isMoving) {
+                // Running animation
+                const legOffset = Math.sin(runCycle * 0.3) * 5;
+                const armOffset = Math.sin(runCycle * 0.3 + Math.PI) * 4;
+                
+                // Arms
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-6 + armOffset, 8);
+                ctx.moveTo(0, 0);
+                ctx.lineTo(6 - armOffset, 8);
+                ctx.stroke();
+                
+                // Legs
+                ctx.beginPath();
+                ctx.moveTo(0, 15);
+                ctx.lineTo(-4 + legOffset, 25);
+                ctx.moveTo(0, 15);
+                ctx.lineTo(4 - legOffset, 25);
+                ctx.stroke();
+                
+            } else {
+                // Standing pose
+                // Arms
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-6, 8);
+                ctx.moveTo(0, 0);
+                ctx.lineTo(6, 8);
+                ctx.stroke();
+                
+                // Legs
+                ctx.beginPath();
+                ctx.moveTo(0, 15);
+                ctx.lineTo(-4, 25);
+                ctx.moveTo(0, 15);
+                ctx.lineTo(4, 25);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+        
+        // Generate platforms for a longer level with achievable jumps
+        const platforms = [
+            // Ground level (only at start and end)
+            { x: 0, y: 560, width: 400, height: 40, color: '#00ff00' }, // Start area
+            { x: 2800, y: 560, width: 200, height: 40, color: '#00ff00' }, // End area
+            
+            // First section - gradual progression
+            { x: 200, y: 450, width: 120, height: 20, color: '#ffff00' },
+            { x: 600, y: 320, width: 120, height: 20, color: '#ffff00' },
+            { x: 800, y: 400, width: 120, height: 20, color: '#ffff00' },
+            
+            // Second section - moderate heights
+            { x: 1200, y: 280, width: 120, height: 20, color: '#ffff00' },
+            { x: 1600, y: 420, width: 120, height: 20, color: '#ffff00' },
+            
+            // Third section - varied but achievable
+            { x: 2000, y: 250, width: 120, height: 20, color: '#ffff00' },
+            { x: 2400, y: 400, width: 120, height: 20, color: '#ffff00' },
+            
+            // Final section - leading to goal
+            { x: 2600, y: 300, width: 120, height: 20, color: '#ffff00' },
+            { x: 2800, y: 250, width: 120, height: 20, color: '#ffff00' },
+            
+            // Goal platform
+            { x: 2950, y: 300, width: 50, height: 20, color: '#ff00ff' }
+        ];
+        
+        // Moving platforms
+        const movingPlatforms = [
+            // Moving platform 1 - horizontal movement
+            { 
+                x: 400, y: 380, width: 120, height: 20, color: '#ffff00',
+                startX: 400, endX: 550, speed: 1, direction: 1,
+                moveType: 'horizontal'
+            },
+            // Moving platform 2 - vertical movement
+            { 
+                x: 1000, y: 350, width: 120, height: 20, color: '#ffff00',
+                startY: 350, endY: 450, speed: 0.8, direction: 1,
+                moveType: 'vertical'
+            },
+            // Moving platform 3 - horizontal movement
+            { 
+                x: 1400, y: 350, width: 120, height: 20, color: '#ffff00',
+                startX: 1400, endX: 1550, speed: 1.2, direction: 1,
+                moveType: 'horizontal'
+            },
+            // Moving platform 4 - vertical movement
+            { 
+                x: 1800, y: 320, width: 120, height: 20, color: '#ffff00',
+                startY: 320, endY: 420, speed: 1, direction: 1,
+                moveType: 'vertical'
+            },
+            // Moving platform 5 - horizontal movement
+            { 
+                x: 2200, y: 350, width: 120, height: 20, color: '#ffff00',
+                startX: 2200, endX: 2350, speed: 1.5, direction: 1,
+                moveType: 'horizontal'
+            }
+        ];
+        
+        // Add spikes and booby traps
+        const spikes = [
+            // Spike field after first platform
+            { x: 400, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 420, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 440, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 460, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 480, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 500, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 520, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 540, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 560, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 580, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 600, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 620, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 640, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 660, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 680, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 700, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 720, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 740, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 760, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 780, y: 560, width: 20, height: 20, color: '#ff0000' },
+            
+            // More spike fields in the middle
+            { x: 1200, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1220, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1240, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1260, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1280, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1300, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1320, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 1340, y: 560, width: 20, height: 20, color: '#ff0000' },
+            
+            // Final spike field before goal
+            { x: 2400, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2420, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2440, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2460, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2480, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2500, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2520, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2540, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2560, y: 560, width: 20, height: 20, color: '#ff0000' },
+            { x: 2580, y: 560, width: 20, height: 20, color: '#ff0000' }
+        ];
+        
+        // Moving obstacles
+        const movingObstacles = [
+            { x: 900, y: 500, width: 30, height: 30, color: '#ff6600', direction: 1, speed: 2 },
+            { x: 1500, y: 500, width: 30, height: 30, color: '#ff6600', direction: -1, speed: 2 },
+            { x: 2100, y: 500, width: 30, height: 30, color: '#ff6600', direction: 1, speed: 2 }
+        ];
+        
+        const gravity = 0.8;
+        const friction = 0.8;
+        
+        // Input handling
+        const keys = {};
+        
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+        
+        // Collision detection
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // Update game logic
+        function update() {
+            // Handle restart delay
+            if (restartDelay > 0) {
+                restartDelay--;
+                return;
+            }
+            
+            // Only process input and movement if playing
+            if (gameState !== 'playing') {
+                return;
+            }
+            
+            // Reset animation states
+            player.isMoving = false;
+            player.isJumping = false;
+            
+            // Handle input
+            if (keys['ArrowLeft'] || keys['a'] || keys['A']) {
+                player.velocityX = -player.speed;
+                player.isMoving = true;
+                player.direction = -1;
+            } else if (keys['ArrowRight'] || keys['d'] || keys['D']) {
+                player.velocityX = player.speed;
+                player.isMoving = true;
+                player.direction = 1;
+            } else {
+                player.velocityX *= friction;
+            }
+            
+            // Jump
+            if ((keys[' '] || keys['ArrowUp'] || keys['w'] || keys['W']) && player.isGrounded) {
+                player.velocityY = -player.jumpPower;
+                player.isGrounded = false;
+                player.isJumping = true;
+            }
+            
+            // Update animation frame
+            if (player.isMoving) {
+                player.runCycle++;
+            }
+            
+            // Apply gravity
+            player.velocityY += gravity;
+            
+            // Update position
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+            
+            // Update moving platforms
+            for (const platform of movingPlatforms) {
+                if (platform.moveType === 'horizontal') {
+                    platform.x += platform.speed * platform.direction;
+                    if (platform.x <= platform.startX || platform.x >= platform.endX) {
+                        platform.direction *= -1;
+                    }
+                } else if (platform.moveType === 'vertical') {
+                    platform.y += platform.speed * platform.direction;
+                    if (platform.y <= platform.startY || platform.y >= platform.endY) {
+                        platform.direction *= -1;
+                    }
+                }
+            }
+            
+            // Update moving obstacles
+            for (const obstacle of movingObstacles) {
+                obstacle.x += obstacle.speed * obstacle.direction;
+                
+                // Bounce off walls
+                if (obstacle.x <= 800 || obstacle.x >= 1200) {
+                    obstacle.direction *= -1;
+                }
+            }
+            
+            // Update camera to follow player
+            cameraX = player.x - canvas.width / 2;
+            cameraX = Math.max(0, Math.min(cameraX, levelWidth - canvas.width));
+            
+            // Check platform collisions
+            player.isGrounded = false;
+            
+            // Check static platforms
+            for (const platform of platforms) {
+                if (checkCollision(player, platform)) {
+                    // Landing on platform
+                    if (player.velocityY > 0 && player.y < platform.y) {
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        player.isGrounded = true;
+                        player.isJumping = false;
+                    }
+                    
+                    // Check if reached goal (pink platform)
+                    if (platform.color === '#ff00ff') {
+                        // Win condition
+                        gameState = 'won';
+                        restartDelay = 60; // 1 second delay (60 frames at 60fps)
+                        alert('Congratulations! You reached the goal! Score: ' + Math.floor(player.x / 10));
+                        return;
+                    }
+                }
+            }
+            
+            // Check moving platform collisions
+            for (const platform of movingPlatforms) {
+                if (checkCollision(player, platform)) {
+                    // Landing on platform
+                    if (player.velocityY > 0 && player.y < platform.y) {
+                        player.y = platform.y - player.height;
+                        player.velocityY = 0;
+                        player.isGrounded = true;
+                        player.isJumping = false;
+                        
+                        // Move player with platform
+                        if (platform.moveType === 'horizontal') {
+                            player.x += platform.speed * platform.direction;
+                        }
+                    }
+                }
+            }
+            
+            // Check spike collisions (game over)
+            for (const spike of spikes) {
+                if (checkCollision(player, spike)) {
+                    gameState = 'gameOver';
+                    restartDelay = 60; // 1 second delay
+                    alert('Game Over! You hit a spike! Score: ' + Math.floor(player.x / 10));
+                    return;
+                }
+            }
+            
+            // Check moving obstacle collisions (game over)
+            for (const obstacle of movingObstacles) {
+                if (checkCollision(player, obstacle)) {
+                    gameState = 'gameOver';
+                    restartDelay = 60; // 1 second delay
+                    alert('Game Over! You hit an obstacle! Score: ' + Math.floor(player.x / 10));
+                    return;
+                }
+            }
+            
+            // Keep player in bounds
+            if (player.x < 0) player.x = 0;
+            if (player.x > levelWidth - player.width) player.x = levelWidth - player.width;
+            
+            // Game over if player falls off screen
+            if (player.y > canvas.height + 50) {
+                gameState = 'gameOver';
+                restartDelay = 60; // 1 second delay
+                return;
+            }
+            
+            // Update score based on distance traveled
+            score = Math.floor(player.x / 10);
+        }
+        
+        // Draw everything
+        function draw() {
+            // Clear canvas with blue background
+            ctx.fillStyle = '#3366cc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Save context for camera transformation
+            ctx.save();
+            ctx.translate(-cameraX, 0);
+            
+            // Draw static platforms
+            for (const platform of platforms) {
+                ctx.fillStyle = platform.color;
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            }
+            
+            // Draw moving platforms
+            for (const platform of movingPlatforms) {
+                ctx.fillStyle = platform.color;
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Add visual indicator for moving platforms
+                ctx.fillStyle = '#ff8800';
+                ctx.fillRect(platform.x + 5, platform.y + 5, 10, 10);
+                ctx.fillRect(platform.x + platform.width - 15, platform.y + 5, 10, 10);
+            }
+            
+            // Draw spikes
+            for (const spike of spikes) {
+                ctx.fillStyle = spike.color;
+                // Draw triangle spikes
+                ctx.beginPath();
+                ctx.moveTo(spike.x + spike.width/2, spike.y);
+                ctx.lineTo(spike.x, spike.y + spike.height);
+                ctx.lineTo(spike.x + spike.width, spike.y + spike.height);
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // Draw moving obstacles
+            for (const obstacle of movingObstacles) {
+                ctx.fillStyle = obstacle.color;
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            }
+            
+            // Draw animated character instead of red square
+            drawCharacter(player.x, player.y, player.isMoving, player.isJumping, player.direction, player.runCycle);
+            
+            // Restore context
+            ctx.restore();
+            
+            // Draw UI (not affected by camera)
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '20px Arial';
+            ctx.fillText('Use Arrow Keys or A/D to move', 10, 30);
+            ctx.fillText('Press Space or W to jump', 10, 55);
+            ctx.fillText('Score: ' + score, 10, 80);
+            ctx.fillText('Goal: Reach the pink platform!', 10, 105);
+            ctx.fillText('Avoid red spikes and orange obstacles!', 10, 130);
+            ctx.fillText('Orange dots = moving platforms!', 10, 155);
+            
+            // Draw progress bar
+            const progress = (player.x / levelWidth) * 100;
+            ctx.fillStyle = '#333333';
+            ctx.fillRect(10, 175, 200, 20);
+            ctx.fillStyle = '#00ff00';
+            ctx.fillRect(10, 175, (progress / 100) * 200, 20);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText('Progress: ' + Math.floor(progress) + '%', 10, 195);
+            
+            // Draw restart message
+            if (gameState !== 'playing' && restartDelay > 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '30px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Restarting in ' + Math.ceil(restartDelay / 60) + '...', canvas.width / 2, canvas.height / 2);
+                ctx.textAlign = 'left';
+            }
+        }
+        
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            
+            // Auto-restart after delay
+            if (restartDelay === 1) {
+                resetPlayer();
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
