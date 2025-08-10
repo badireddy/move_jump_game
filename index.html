@@ -3,37 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Platformer</title>
+    <title>Touch-Ready Platformer</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
         body {
+            font-family: 'Inter', sans-serif;
+            background-color: #2c3e50;
             margin: 0;
             padding: 0;
-            background: #2c3e50;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            color: #ecf0f1;
+            position: relative;
+            overflow: hidden;
         }
         #game-container {
             border: 3px solid #34495e;
             border-radius: 10px;
             background: #34495e;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 800px;
+            aspect-ratio: 4 / 3; /* Maintain a 4:3 aspect ratio */
+            position: relative;
         }
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
+        }
+        /* Mobile controls container */
+        #controls-container {
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 10;
+        }
+        /* Control buttons */
+        .control-button {
+            width: 80px;
+            height: 80px;
+            background-color: rgba(52, 73, 94, 0.7);
+            border: 2px solid #34495e;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            color: #ecf0f1;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        .control-button:active {
+            background-color: #34495e;
+            transform: scale(0.95);
+        }
+        /* Game Over/Win Message Box */
+        #message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            border: 2px solid #ecf0f1;
+            border-radius: 10px;
+            padding: 20px 40px;
+            text-align: center;
+            z-index: 20;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
         }
     </style>
 </head>
 <body>
     <div id="game-container">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <canvas id="gameCanvas"></canvas>
+        <div id="message-box" class="text-white">
+            <h2 id="message-text" class="text-3xl font-bold"></h2>
+            <p id="message-score" class="text-xl"></p>
+            <p class="mt-4 text-sm">Restarting...</p>
+        </div>
     </div>
-    
+
+    <!-- On-screen controls -->
+    <div id="controls-container" class="lg:flex md:flex sm:flex">
+        <div class="flex gap-4">
+            <div id="left-button" class="control-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left"><path d="m15 18-6-6 6-6"/></svg>
+            </div>
+            <div id="right-button" class="control-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+        </div>
+        <div id="jump-button" class="control-button">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up"><path d="m12 19-6-6 6-6"/><path d="M12 5v14"/></svg>
+        </div>
+    </div>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        
+        const messageBox = document.getElementById('message-box');
+        const messageText = document.getElementById('message-text');
+        const messageScore = document.getElementById('message-score');
+
+        // Set canvas size dynamically to fill the container and be responsive
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
         // Game variables
         const player = {
             x: 50,
@@ -205,31 +297,31 @@
         // Moving platforms
         const movingPlatforms = [
             // Moving platform 1 - horizontal movement
-            { 
+            {
                 x: 400, y: 380, width: 120, height: 20, color: '#ffff00',
                 startX: 400, endX: 550, speed: 1, direction: 1,
                 moveType: 'horizontal'
             },
             // Moving platform 2 - vertical movement
-            { 
+            {
                 x: 1000, y: 350, width: 120, height: 20, color: '#ffff00',
                 startY: 350, endY: 450, speed: 0.8, direction: 1,
                 moveType: 'vertical'
             },
             // Moving platform 3 - horizontal movement
-            { 
+            {
                 x: 1400, y: 350, width: 120, height: 20, color: '#ffff00',
                 startX: 1400, endX: 1550, speed: 1.2, direction: 1,
                 moveType: 'horizontal'
             },
             // Moving platform 4 - vertical movement
-            { 
+            {
                 x: 1800, y: 320, width: 120, height: 20, color: '#ffff00',
                 startY: 320, endY: 420, speed: 1, direction: 1,
                 moveType: 'vertical'
             },
             // Moving platform 5 - horizontal movement
-            { 
+            {
                 x: 2200, y: 350, width: 120, height: 20, color: '#ffff00',
                 startX: 2200, endX: 2350, speed: 1.5, direction: 1,
                 moveType: 'horizontal'
@@ -296,6 +388,7 @@
         // Input handling
         const keys = {};
         
+        // Keyboard event listeners (still useful for desktop)
         document.addEventListener('keydown', (e) => {
             keys[e.key] = true;
         });
@@ -303,6 +396,32 @@
         document.addEventListener('keyup', (e) => {
             keys[e.key] = false;
         });
+
+        // Touch and mouse control event listeners
+        const leftButton = document.getElementById('left-button');
+        const rightButton = document.getElementById('right-button');
+        const jumpButton = document.getElementById('jump-button');
+
+        function setupButtonListeners(button, key) {
+            const startEvent = (e) => {
+                e.preventDefault();
+                keys[key] = true;
+            };
+            const endEvent = (e) => {
+                e.preventDefault();
+                keys[key] = false;
+            };
+
+            button.addEventListener('touchstart', startEvent, { passive: false });
+            button.addEventListener('touchend', endEvent, { passive: false });
+            button.addEventListener('mousedown', startEvent);
+            button.addEventListener('mouseup', endEvent);
+            button.addEventListener('mouseleave', endEvent);
+        }
+
+        setupButtonListeners(leftButton, 'ArrowLeft');
+        setupButtonListeners(rightButton, 'ArrowRight');
+        setupButtonListeners(jumpButton, ' ');
         
         // Collision detection
         function checkCollision(rect1, rect2) {
@@ -310,6 +429,18 @@
                    rect1.x + rect1.width > rect2.x &&
                    rect1.y < rect2.y + rect2.height &&
                    rect1.y + rect1.height > rect2.y;
+        }
+
+        // Show game over/win message
+        function showMessage(text, currentScore) {
+            messageText.textContent = text;
+            messageScore.textContent = 'Score: ' + currentScore;
+            messageBox.style.display = 'flex';
+        }
+
+        // Hide message
+        function hideMessage() {
+            messageBox.style.display = 'none';
         }
         
         // Update game logic
@@ -408,8 +539,8 @@
                     if (platform.color === '#ff00ff') {
                         // Win condition
                         gameState = 'won';
-                        restartDelay = 60; // 1 second delay (60 frames at 60fps)
-                        alert('Congratulations! You reached the goal! Score: ' + Math.floor(player.x / 10));
+                        restartDelay = 180; // 3 second delay (60 frames at 60fps)
+                        showMessage('You Won!', Math.floor(player.x / 10));
                         return;
                     }
                 }
@@ -437,8 +568,8 @@
             for (const spike of spikes) {
                 if (checkCollision(player, spike)) {
                     gameState = 'gameOver';
-                    restartDelay = 60; // 1 second delay
-                    alert('Game Over! You hit a spike! Score: ' + Math.floor(player.x / 10));
+                    restartDelay = 180; // 3 second delay
+                    showMessage('Game Over!', Math.floor(player.x / 10));
                     return;
                 }
             }
@@ -447,8 +578,8 @@
             for (const obstacle of movingObstacles) {
                 if (checkCollision(player, obstacle)) {
                     gameState = 'gameOver';
-                    restartDelay = 60; // 1 second delay
-                    alert('Game Over! You hit an obstacle! Score: ' + Math.floor(player.x / 10));
+                    restartDelay = 180; // 3 second delay
+                    showMessage('Game Over!', Math.floor(player.x / 10));
                     return;
                 }
             }
@@ -460,7 +591,8 @@
             // Game over if player falls off screen
             if (player.y > canvas.height + 50) {
                 gameState = 'gameOver';
-                restartDelay = 60; // 1 second delay
+                restartDelay = 180; // 3 second delay
+                showMessage('Game Over!', Math.floor(player.x / 10));
                 return;
             }
             
@@ -521,33 +653,18 @@
             
             // Draw UI (not affected by camera)
             ctx.fillStyle = '#ffffff';
-            ctx.font = '20px Arial';
-            ctx.fillText('Use Arrow Keys or A/D to move', 10, 30);
-            ctx.fillText('Press Space or W to jump', 10, 55);
-            ctx.fillText('Score: ' + score, 10, 80);
-            ctx.fillText('Goal: Reach the pink platform!', 10, 105);
-            ctx.fillText('Avoid red spikes and orange obstacles!', 10, 130);
-            ctx.fillText('Orange dots = moving platforms!', 10, 155);
+            ctx.font = '20px Inter';
+            ctx.fillText('Score: ' + score, 20, 30);
+            ctx.fillText('Goal: Reach the pink platform!', 20, 55);
             
             // Draw progress bar
             const progress = (player.x / levelWidth) * 100;
             ctx.fillStyle = '#333333';
-            ctx.fillRect(10, 175, 200, 20);
+            ctx.fillRect(20, 75, 200, 20);
             ctx.fillStyle = '#00ff00';
-            ctx.fillRect(10, 175, (progress / 100) * 200, 20);
+            ctx.fillRect(20, 75, (progress / 100) * 200, 20);
             ctx.fillStyle = '#ffffff';
-            ctx.fillText('Progress: ' + Math.floor(progress) + '%', 10, 195);
-            
-            // Draw restart message
-            if (gameState !== 'playing' && restartDelay > 0) {
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.fillStyle = '#ffffff';
-                ctx.font = '30px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('Restarting in ' + Math.ceil(restartDelay / 60) + '...', canvas.width / 2, canvas.height / 2);
-                ctx.textAlign = 'left';
-            }
+            ctx.fillText('Progress: ' + Math.floor(progress) + '%', 20, 95);
         }
         
         // Game loop
@@ -558,6 +675,7 @@
             // Auto-restart after delay
             if (restartDelay === 1) {
                 resetPlayer();
+                hideMessage();
             }
             
             requestAnimationFrame(gameLoop);
