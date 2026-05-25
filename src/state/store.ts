@@ -201,5 +201,8 @@ function computeBadges(p: ProfileState): string[] {
   const stateMastered = Object.values(p.cards.usstates ?? {}).filter((c) => c.box >= 4).length
   if (stateMastered >= 10) badges.add('states-explorer')
   if (stateMastered >= 25) badges.add('states-master')
+  const spellMastered = Object.values(p.cards.spelling ?? {}).filter((c) => c.box >= 4).length
+  if (spellMastered >= 10) badges.add('spelling-explorer')
+  if (spellMastered >= 25) badges.add('spelling-master')
   return [...badges]
 }

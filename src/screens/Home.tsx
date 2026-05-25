@@ -3,24 +3,25 @@ import { useStore } from '../state/store'
 import { TopBar } from '../components/TopBar'
 import { COUNTRIES } from '../content/geography/countries'
 import { STATES } from '../content/usstates/states'
+import { SPELLING_WORDS } from '../content/spelling/words'
 import { topicProgress } from '../srs/engine'
 import { BADGE_INFO } from '../content/badges'
 
 interface HomeProps {
   onPlayGeography: () => void
   onPlayStates: () => void
+  onPlaySpelling: () => void
   onOpenReview: () => void
   onOpenDashboard: () => void
   onSwitchProfile: () => void
 }
 
 const LOCKED_TOPICS = [
-  { icon: '🔤', title: 'Spelling Bee', sub: 'Words & meanings' },
   { icon: '🦁', title: 'Nature', sub: 'Animals, birds & plants' },
   { icon: '🏛️', title: 'Greek Myths', sub: 'Gods, heroes & history' },
 ]
 
-export function Home({ onPlayGeography, onPlayStates, onOpenReview, onOpenDashboard, onSwitchProfile }: HomeProps) {
+export function Home({ onPlayGeography, onPlayStates, onPlaySpelling, onOpenReview, onOpenDashboard, onSwitchProfile }: HomeProps) {
   const current = useStore((s) => s.current())
   const family = useStore((s) => s.family)
   if (!current) return null
@@ -28,6 +29,7 @@ export function Home({ onPlayGeography, onPlayStates, onOpenReview, onOpenDashbo
   const now = Date.now()
   const geo = topicProgress(current.cards.geography, COUNTRIES.length, now)
   const states = topicProgress(current.cards.usstates ?? {}, STATES.length, now)
+  const spelling = topicProgress(current.cards.spelling ?? {}, SPELLING_WORDS.length, now)
   const leaderboard = [...family.profiles].sort((a, b) => b.stats.xp - a.stats.xp)
 
   return (
@@ -75,6 +77,28 @@ export function Home({ onPlayGeography, onPlayStates, onOpenReview, onOpenDashbo
           <Stat label="Learned" value={`${states.introduced}/${states.total}`} />
           <Stat label="Mastered" value={`${states.mastered}`} />
           <Stat label="To review" value={`${states.due}`} highlight={states.due > 0} />
+        </div>
+      </motion.button>
+
+      <motion.button
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={onPlaySpelling}
+        className="card mt-3 overflow-hidden p-5 text-left"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs font-bold uppercase tracking-wide text-brand-300">Spell &amp; Listen</div>
+            <div className="font-display text-2xl font-extrabold">🔤 Spelling Bee</div>
+            <div className="text-sm text-slate-300">Hear a word, then spell it</div>
+          </div>
+          <div className="rounded-full bg-brand-600 px-5 py-3 font-display text-lg font-bold">Play</div>
+        </div>
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
+          <Stat label="Learned" value={`${spelling.introduced}/${spelling.total}`} />
+          <Stat label="Mastered" value={`${spelling.mastered}`} />
+          <Stat label="To review" value={`${spelling.due}`} highlight={spelling.due > 0} />
         </div>
       </motion.button>
 

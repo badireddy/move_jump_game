@@ -6,10 +6,11 @@ import { ProfileSelect } from './screens/ProfileSelect'
 import { Home } from './screens/Home'
 import { GeographySession } from './screens/GeographySession'
 import { StatesSession } from './screens/StatesSession'
+import { SpellingSession } from './screens/SpellingSession'
 import { Review } from './screens/Review'
 import { Dashboard } from './screens/Dashboard'
 
-type Screen = 'profiles' | 'home' | 'geography' | 'usstates' | 'review' | 'dashboard'
+type Screen = 'profiles' | 'home' | 'geography' | 'usstates' | 'spelling' | 'review' | 'dashboard'
 
 export default function App() {
   const ready = useStore((s) => s.ready)
@@ -18,7 +19,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('profiles')
   const [mode, setMode] = useState<SessionMode>('daily')
 
-  const startSession = (topic: 'geography' | 'usstates', m: SessionMode) => {
+  const startSession = (topic: 'geography' | 'usstates' | 'spelling', m: SessionMode) => {
     setMode(m)
     setScreen(topic)
   }
@@ -53,6 +54,7 @@ export default function App() {
             <Home
               onPlayGeography={() => startSession('geography', 'daily')}
               onPlayStates={() => startSession('usstates', 'daily')}
+              onPlaySpelling={() => startSession('spelling', 'daily')}
               onOpenReview={() => setScreen('review')}
               onOpenDashboard={() => setScreen('dashboard')}
               onSwitchProfile={() => setScreen('profiles')}
@@ -60,6 +62,7 @@ export default function App() {
           )}
           {!showProfiles && screen === 'geography' && <GeographySession mode={mode} onExit={() => setScreen('home')} />}
           {!showProfiles && screen === 'usstates' && <StatesSession mode={mode} onExit={() => setScreen('home')} />}
+          {!showProfiles && screen === 'spelling' && <SpellingSession mode={mode} onExit={() => setScreen('home')} />}
           {!showProfiles && screen === 'review' && <Review onStart={startSession} onBack={() => setScreen('home')} />}
           {!showProfiles && screen === 'dashboard' && <Dashboard onBack={() => setScreen('home')} />}
         </motion.div>
