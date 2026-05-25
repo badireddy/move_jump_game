@@ -96,7 +96,16 @@ export const useStore = create<AppState>((set, get) => ({
     const cfg = readFirebaseConfig()
     if (cfg) {
       try {
-        storage = await createFirebaseAdapter(cfg)
+        const cloud = await createFirebaseAdapter(cfg)
+        // First time on the cloud: if the shared doc is empty but this device
+        // has local progress, seed the cloud with it so existing profiles
+        // (and their saved progress) carry over instead of starting blank.
+        const remote = await cloud.load()
+        if (remote.profiles.length === 0) {
+          const local = await new LocalStorageAdapter().load()
+          if (local.profiles.length > 0) await cloud.save(local)
+        }
+        storage = cloud
         storage.subscribe?.((data) => set({ family: data }))
       } catch (e) {
         console.warn('Cloud sync unavailable, falling back to local storage.', e)
