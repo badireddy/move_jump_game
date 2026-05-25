@@ -15,8 +15,8 @@ interface WorldMapProps {
 function WorldMapBase({ highlightIso2, wrongIso2, onPick, interactive = false, accent = '#a78bfa' }: WorldMapProps) {
   return (
     <div className="w-full overflow-hidden rounded-2xl bg-slate-900/40">
-      <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 150 }} height={360}>
-        <ZoomableGroup center={[10, 25]} zoom={1} minZoom={1} maxZoom={6}>
+      <ComposableMap projection="geoEqualEarth" projectionConfig={{ scale: 195 }} width={800} height={520}>
+        <ZoomableGroup center={[10, 10]} zoom={1} minZoom={1} maxZoom={8}>
           <Geographies geography={worldTopo as object}>
             {({ geographies }) =>
               geographies.map((geo) => {

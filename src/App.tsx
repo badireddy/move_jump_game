@@ -4,9 +4,10 @@ import { useStore } from './state/store'
 import { ProfileSelect } from './screens/ProfileSelect'
 import { Home } from './screens/Home'
 import { GeographySession } from './screens/GeographySession'
+import { StatesSession } from './screens/StatesSession'
 import { Dashboard } from './screens/Dashboard'
 
-type Screen = 'profiles' | 'home' | 'geography' | 'dashboard'
+type Screen = 'profiles' | 'home' | 'geography' | 'usstates' | 'dashboard'
 
 export default function App() {
   const ready = useStore((s) => s.ready)
@@ -43,11 +44,13 @@ export default function App() {
           {!showProfiles && screen === 'home' && (
             <Home
               onPlayGeography={() => setScreen('geography')}
+              onPlayStates={() => setScreen('usstates')}
               onOpenDashboard={() => setScreen('dashboard')}
               onSwitchProfile={() => setScreen('profiles')}
             />
           )}
           {!showProfiles && screen === 'geography' && <GeographySession onExit={() => setScreen('home')} />}
+          {!showProfiles && screen === 'usstates' && <StatesSession onExit={() => setScreen('home')} />}
           {!showProfiles && screen === 'dashboard' && <Dashboard onBack={() => setScreen('home')} />}
         </motion.div>
       </AnimatePresence>

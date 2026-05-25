@@ -28,7 +28,7 @@ function dayDiff(a: string, b: string): number {
 }
 
 function emptyCards(): ProfileState['cards'] {
-  return { geography: {}, spelling: {}, nature: {}, mythology: {} }
+  return { geography: {}, usstates: {}, spelling: {}, nature: {}, mythology: {} }
 }
 
 export function newProfileState(profile: Profile): ProfileState {
@@ -132,19 +132,21 @@ export const useStore = create<AppState>((set, get) => ({
 
   introduce(topic, itemId) {
     mutateCurrent(get, set, (p) => {
-      if (p.cards[topic][itemId]) return p
+      const topicCards = p.cards[topic] ?? {}
+      if (topicCards[itemId]) return p
       const card = createCard(itemId, Date.now())
-      return { ...p, cards: { ...p.cards, [topic]: { ...p.cards[topic], [itemId]: card } } }
+      return { ...p, cards: { ...p.cards, [topic]: { ...topicCards, [itemId]: card } } }
     })
   },
 
   recordReview(topic, itemId, event) {
     mutateCurrent(get, set, (p) => {
-      const existing: SrsCard = p.cards[topic][itemId] ?? createCard(itemId, event.t)
+      const topicCards = p.cards[topic] ?? {}
+      const existing: SrsCard = topicCards[itemId] ?? createCard(itemId, event.t)
       const updated = srsReview(existing, event)
       return {
         ...p,
-        cards: { ...p.cards, [topic]: { ...p.cards[topic], [updated.itemId]: updated } },
+        cards: { ...p.cards, [topic]: { ...topicCards, [updated.itemId]: updated } },
         stats: {
           ...p.stats,
           totalReviews: p.stats.totalReviews + 1,
@@ -187,5 +189,8 @@ function computeBadges(p: ProfileState): string[] {
   const geoMastered = Object.values(p.cards.geography).filter((c) => c.box >= 4).length
   if (geoMastered >= 10) badges.add('geo-explorer')
   if (geoMastered >= 30) badges.add('geo-master')
+  const stateMastered = Object.values(p.cards.usstates ?? {}).filter((c) => c.box >= 4).length
+  if (stateMastered >= 10) badges.add('states-explorer')
+  if (stateMastered >= 25) badges.add('states-master')
   return [...badges]
 }

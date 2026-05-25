@@ -1,47 +1,43 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { CountryItem, QuizMode } from '../types'
+import type { QuizMode, StateItem } from '../types'
 import { useStore } from '../state/store'
-import { COUNTRIES, COUNTRY_BY_ID } from '../content/geography/countries'
+import { STATES, STATE_BY_ID } from '../content/usstates/states'
 import { planSession } from '../srs/engine'
-import { buildQuestion, type GeoMode, type GeoQuestion } from '../content/geography/quiz'
-import { Flag } from '../components/Flag'
-import { WorldMap } from '../components/WorldMap'
+import { buildStateQuestion, type StateMode, type StateQuestion } from '../content/usstates/quiz'
+import { UsMap } from '../components/UsMap'
 import { explainWrong, mnemonicFor } from '../ai/client'
 import { speak } from '../lib/audio'
 import { bigCheer, cheer } from '../lib/celebrate'
 
-const ALL_IDS = COUNTRIES.map((c) => c.id)
+const ALL_IDS = STATES.map((s) => s.id)
 
-function correctLabel(mode: GeoMode, item: CountryItem): string {
-  return mode === 'country-to-capital' ? item.capital : item.name
+function correctLabel(mode: StateMode, item: StateItem): string {
+  return mode === 'state-to-capital' ? item.capital : item.name
 }
-function optionLabel(mode: GeoMode, opt: CountryItem): string {
-  return mode === 'country-to-capital' ? opt.capital : opt.name
+function optionLabel(mode: StateMode, opt: StateItem): string {
+  return mode === 'state-to-capital' ? opt.capital : opt.name
 }
-function promptFor(mode: GeoMode, item: CountryItem): string {
+function promptFor(mode: StateMode, item: StateItem): string {
   switch (mode) {
-    case 'flag-to-country':
-      return "Which country's flag is this?"
-    case 'country-to-capital':
+    case 'state-to-capital':
       return `What is the capital of ${item.name}?`
-    case 'capital-to-country':
-      return `${item.capital} is the capital of…?`
-    case 'locate-on-map':
+    case 'capital-to-state':
+      return `${item.capital} is the capital of which state?`
+    case 'locate-state':
       return `Tap ${item.name} on the map!`
   }
 }
 
-export function GeographySession({ onExit }: { onExit: () => void }) {
+export function StatesSession({ onExit }: { onExit: () => void }) {
   const current = useStore((s) => s.current())!
   const introduce = useStore((s) => s.introduce)
   const recordReview = useStore((s) => s.recordReview)
   const finishSession = useStore((s) => s.finishSession)
   const accent = current.profile.color
 
-  // Plan once, at mount.
   const plan = useMemo(
-    () => planSession(current.cards.geography, ALL_IDS, Date.now(), { maxNew: 5, maxReview: 12 }),
+    () => planSession(current.cards.usstates ?? {}, ALL_IDS, Date.now(), { maxNew: 5, maxReview: 12 }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   )
@@ -59,7 +55,7 @@ export function GeographySession({ onExit }: { onExit: () => void }) {
       <TeachFlow
         ids={plan.newIds}
         accent={accent}
-        onTaught={(id) => introduce('geography', id)}
+        onTaught={(id) => introduce('usstates', id)}
         onDone={() => setPhase('quiz')}
       />
     )
@@ -70,9 +66,9 @@ export function GeographySession({ onExit }: { onExit: () => void }) {
       <QuizFlow
         ids={[...plan.newIds, ...plan.reviewIds]}
         accent={accent}
-        onAnswer={(id, ev) => recordReview('geography', id, ev)}
+        onAnswer={(id, ev) => recordReview('usstates', id, ev)}
         onDone={(summary) => {
-          finishSession({ topic: 'geography', newLearned: plan.newIds.length, ...summary })
+          finishSession({ topic: 'usstates', newLearned: plan.newIds.length, ...summary })
           setPhase('done')
         }}
       />
@@ -82,7 +78,6 @@ export function GeographySession({ onExit }: { onExit: () => void }) {
   return <SessionDone newLearned={plan.newIds.length} onExit={onExit} />
 }
 
-// --- Teach phase: introduce each new country with flag, capital, map & tip ---
 function TeachFlow({
   ids,
   accent,
@@ -95,7 +90,7 @@ function TeachFlow({
   onDone: () => void
 }) {
   const [i, setI] = useState(0)
-  const item = COUNTRY_BY_ID[ids[i]]
+  const item = STATE_BY_ID[ids[i]]
   const [tip, setTip] = useState<string | null>(null)
 
   useEffect(() => {
@@ -103,7 +98,7 @@ function TeachFlow({
     speak(`Let's explore ${item.name}! Its capital city is ${item.capital}.`)
     setTip(null)
     let alive = true
-    mnemonicFor(item.id, `${item.capital} is the capital of ${item.name}`).then((t) => {
+    mnemonicFor(item.id, `${item.capital} is the capital of the US state ${item.name}`).then((t) => {
       if (alive) setTip(t)
     })
     return () => {
@@ -121,20 +116,17 @@ function TeachFlow({
     <div className="flex flex-1 flex-col">
       <Header title={`Learn · ${i + 1}/${ids.length}`} onExit={onDone} exitLabel="Skip to quiz" />
       <motion.div key={item.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-1 flex-col items-center gap-3 p-5">
-        <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg">
-          <Flag iso2={item.iso2} className="h-28 w-44" />
-        </div>
         <div className="text-center">
           <div className="font-display text-3xl font-extrabold">{item.name}</div>
           <div className="text-slate-300">
             Capital: <span className="font-bold text-white">{item.capital}</span>
           </div>
-          <div className="text-xs text-slate-400">{item.continent}</div>
+          <div className="text-xs text-slate-400">United States</div>
         </div>
         <button onClick={() => speak(`${item.name}. Its capital is ${item.capital}!`)} className="btn rounded-full bg-white/10 px-4 py-1.5 text-sm">
           🔊 Say it
         </button>
-        <WorldMap highlightIso2={item.iso2} accent={accent} />
+        <UsMap highlightCode={item.code} accent={accent} />
         {tip && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl bg-brand-500/15 px-4 py-2 text-center text-sm text-brand-100">
             💡 {tip}
@@ -148,11 +140,10 @@ function TeachFlow({
   )
 }
 
-// --- Quiz phase ---
 interface Feedback {
   correct: boolean
-  question: GeoQuestion
-  chosen?: CountryItem
+  question: StateQuestion
+  chosen?: StateItem
   explanation?: string | null
 }
 
@@ -167,16 +158,16 @@ function QuizFlow({
   onAnswer: (id: string, ev: { t: number; correct: boolean; mode: QuizMode; chosenItemId?: string }) => void
   onDone: (summary: { reviewed: number; correct: number }) => void
 }) {
-  const queueRef = useRef<GeoQuestion[]>(ids.map((id) => buildQuestion(id)))
+  const queueRef = useRef<StateQuestion[]>(ids.map((id) => buildStateQuestion(id)))
   const requeued = useRef<Set<string>>(new Set())
   const [idx, setIdx] = useState(0)
   const tally = useRef({ reviewed: 0, correct: 0 })
   const [feedback, setFeedback] = useState<Feedback | null>(null)
-  const [wrongIso, setWrongIso] = useState<string | undefined>()
+  const [wrongCode, setWrongCode] = useState<string | undefined>()
 
   const q = queueRef.current[idx]
 
-  function answer(chosen: CountryItem | undefined) {
+  function answer(chosen: StateItem | undefined) {
     if (feedback) return
     const correct = chosen?.id === q.item.id
     tally.current.reviewed += 1
@@ -192,11 +183,10 @@ function QuizFlow({
       cheer()
       setFeedback({ correct, question: q, chosen })
     } else {
-      if (q.mode === 'locate-on-map') setWrongIso(chosen?.iso2)
-      // Re-queue a missed item once for extra reinforcement this session.
+      if (q.mode === 'locate-state') setWrongCode(chosen?.code)
       if (!requeued.current.has(q.item.id)) {
         requeued.current.add(q.item.id)
-        queueRef.current.push(buildQuestion(q.item.id, { allowMap: false }))
+        queueRef.current.push(buildStateQuestion(q.item.id, { allowMap: false }))
       }
       setFeedback({ correct, question: q, chosen, explanation: undefined })
       explainWrong(correctLabel(q.mode, q.item), chosen ? optionLabel(q.mode, chosen) : 'that').then((ex) =>
@@ -207,7 +197,7 @@ function QuizFlow({
 
   function next() {
     setFeedback(null)
-    setWrongIso(undefined)
+    setWrongCode(undefined)
     if (idx + 1 < queueRef.current.length) setIdx(idx + 1)
     else onDone({ ...tally.current })
   }
@@ -223,16 +213,8 @@ function QuizFlow({
       <div className="flex flex-1 flex-col">
         <p className="font-display mb-3 text-center text-xl font-bold">{promptFor(q.mode, q.item)}</p>
 
-        {q.mode === 'flag-to-country' && (
-          <div className="mb-4 flex justify-center">
-            <div className="overflow-hidden rounded-xl border border-white/20 shadow-lg">
-              <Flag iso2={q.item.iso2} className="h-32 w-52" />
-            </div>
-          </div>
-        )}
-
-        {q.mode === 'locate-on-map' ? (
-          <WorldMap interactive accent={accent} wrongIso2={wrongIso} onPick={(c) => answer(c)} />
+        {q.mode === 'locate-state' ? (
+          <UsMap interactive accent={accent} wrongCode={wrongCode} onPick={(s) => answer(s)} />
         ) : (
           <div className="grid grid-cols-1 gap-3">
             {q.options.map((opt) => {
@@ -293,7 +275,7 @@ function SessionDone({ newLearned, onExit }: { newLearned: number; onExit: () =>
       <div className="text-6xl">🏆</div>
       <h2 className="font-display text-3xl font-extrabold">Quest Complete!</h2>
       <p className="text-slate-300">
-        You learned {newLearned} new {newLearned === 1 ? 'place' : 'places'} and earned XP!
+        You learned {newLearned} new {newLearned === 1 ? 'state' : 'states'} and earned XP!
       </p>
       <button onClick={onExit} className="btn bg-brand-600 px-8 py-3 font-display text-lg">
         Back home
