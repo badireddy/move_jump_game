@@ -1,19 +1,27 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useStore } from './state/store'
+import type { SessionMode } from './types'
 import { ProfileSelect } from './screens/ProfileSelect'
 import { Home } from './screens/Home'
 import { GeographySession } from './screens/GeographySession'
 import { StatesSession } from './screens/StatesSession'
+import { Review } from './screens/Review'
 import { Dashboard } from './screens/Dashboard'
 
-type Screen = 'profiles' | 'home' | 'geography' | 'usstates' | 'dashboard'
+type Screen = 'profiles' | 'home' | 'geography' | 'usstates' | 'review' | 'dashboard'
 
 export default function App() {
   const ready = useStore((s) => s.ready)
   const init = useStore((s) => s.init)
   const currentProfileId = useStore((s) => s.currentProfileId)
   const [screen, setScreen] = useState<Screen>('profiles')
+  const [mode, setMode] = useState<SessionMode>('daily')
+
+  const startSession = (topic: 'geography' | 'usstates', m: SessionMode) => {
+    setMode(m)
+    setScreen(topic)
+  }
 
   useEffect(() => {
     void init()
@@ -43,14 +51,16 @@ export default function App() {
           {showProfiles && <ProfileSelect onReady={() => setScreen('home')} />}
           {!showProfiles && screen === 'home' && (
             <Home
-              onPlayGeography={() => setScreen('geography')}
-              onPlayStates={() => setScreen('usstates')}
+              onPlayGeography={() => startSession('geography', 'daily')}
+              onPlayStates={() => startSession('usstates', 'daily')}
+              onOpenReview={() => setScreen('review')}
               onOpenDashboard={() => setScreen('dashboard')}
               onSwitchProfile={() => setScreen('profiles')}
             />
           )}
-          {!showProfiles && screen === 'geography' && <GeographySession onExit={() => setScreen('home')} />}
-          {!showProfiles && screen === 'usstates' && <StatesSession onExit={() => setScreen('home')} />}
+          {!showProfiles && screen === 'geography' && <GeographySession mode={mode} onExit={() => setScreen('home')} />}
+          {!showProfiles && screen === 'usstates' && <StatesSession mode={mode} onExit={() => setScreen('home')} />}
+          {!showProfiles && screen === 'review' && <Review onStart={startSession} onBack={() => setScreen('home')} />}
           {!showProfiles && screen === 'dashboard' && <Dashboard onBack={() => setScreen('home')} />}
         </motion.div>
       </AnimatePresence>

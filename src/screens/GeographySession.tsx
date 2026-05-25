@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import type { CountryItem, QuizMode } from '../types'
+import type { CountryItem, QuizMode, SessionMode } from '../types'
 import { useStore } from '../state/store'
 import { COUNTRIES, COUNTRY_BY_ID } from '../content/geography/countries'
-import { planSession } from '../srs/engine'
+import { planSession, reviewIds } from '../srs/engine'
 import { buildQuestion, type GeoMode, type GeoQuestion } from '../content/geography/quiz'
 import { Flag } from '../components/Flag'
 import { WorldMap } from '../components/WorldMap'
@@ -32,32 +32,38 @@ function promptFor(mode: GeoMode, item: CountryItem): string {
   }
 }
 
-export function GeographySession({ onExit }: { onExit: () => void }) {
+export function GeographySession({ onExit, mode = 'daily' }: { onExit: () => void; mode?: SessionMode }) {
   const current = useStore((s) => s.current())!
   const introduce = useStore((s) => s.introduce)
   const recordReview = useStore((s) => s.recordReview)
   const finishSession = useStore((s) => s.finishSession)
   const accent = current.profile.color
 
-  // Plan once, at mount.
-  const plan = useMemo(
-    () => planSession(current.cards.geography, ALL_IDS, Date.now(), { maxNew: 5, maxReview: 12 }),
+  // Plan once, at mount. Daily mixes due reviews + new items to teach; review
+  // and mistakes modes quiz over already-learned items with no teach phase.
+  const plan = useMemo(() => {
+    const cards = current.cards.geography
+    if (mode === 'daily') {
+      const p = planSession(cards, ALL_IDS, Date.now(), { maxNew: 5, maxReview: 12 })
+      return { teachIds: p.newIds, quizIds: [...p.newIds, ...p.reviewIds], newLearned: p.newIds.length }
+    }
+    const ids = reviewIds(cards, { mistakesOnly: mode === 'mistakes', max: 20 })
+    return { teachIds: [] as string[], quizIds: ids, newLearned: 0 }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
+  }, [])
 
   const [phase, setPhase] = useState<'teach' | 'quiz' | 'done'>(
-    plan.newIds.length > 0 ? 'teach' : 'quiz',
+    plan.teachIds.length > 0 ? 'teach' : 'quiz',
   )
 
-  if (plan.newIds.length === 0 && plan.reviewIds.length === 0) {
-    return <AllCaughtUp onExit={onExit} />
+  if (plan.teachIds.length === 0 && plan.quizIds.length === 0) {
+    return <EmptyState mode={mode} onExit={onExit} />
   }
 
   if (phase === 'teach') {
     return (
       <TeachFlow
-        ids={plan.newIds}
+        ids={plan.teachIds}
         accent={accent}
         onTaught={(id) => introduce('geography', id)}
         onDone={() => setPhase('quiz')}
@@ -68,18 +74,18 @@ export function GeographySession({ onExit }: { onExit: () => void }) {
   if (phase === 'quiz') {
     return (
       <QuizFlow
-        ids={[...plan.newIds, ...plan.reviewIds]}
+        ids={plan.quizIds}
         accent={accent}
         onAnswer={(id, ev) => recordReview('geography', id, ev)}
         onDone={(summary) => {
-          finishSession({ topic: 'geography', newLearned: plan.newIds.length, ...summary })
+          finishSession({ topic: 'geography', newLearned: plan.newLearned, ...summary })
           setPhase('done')
         }}
       />
     )
   }
 
-  return <SessionDone newLearned={plan.newIds.length} onExit={onExit} />
+  return <SessionDone mode={mode} newLearned={plan.newLearned} onExit={onExit} />
 }
 
 // --- Teach phase: introduce each new country with flag, capital, map & tip ---
@@ -284,16 +290,18 @@ function QuizFlow({
   )
 }
 
-function SessionDone({ newLearned, onExit }: { newLearned: number; onExit: () => void }) {
+function SessionDone({ mode, newLearned, onExit }: { mode: SessionMode; newLearned: number; onExit: () => void }) {
   useEffect(() => {
     bigCheer()
   }, [])
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
       <div className="text-6xl">🏆</div>
-      <h2 className="font-display text-3xl font-extrabold">Quest Complete!</h2>
+      <h2 className="font-display text-3xl font-extrabold">{mode === 'daily' ? 'Quest Complete!' : 'Great review!'}</h2>
       <p className="text-slate-300">
-        You learned {newLearned} new {newLearned === 1 ? 'place' : 'places'} and earned XP!
+        {mode === 'daily'
+          ? `You learned ${newLearned} new ${newLearned === 1 ? 'place' : 'places'} and earned XP!`
+          : 'Every practice makes it stick. You earned XP!'}
       </p>
       <button onClick={onExit} className="btn bg-brand-600 px-8 py-3 font-display text-lg">
         Back home
@@ -302,12 +310,18 @@ function SessionDone({ newLearned, onExit }: { newLearned: number; onExit: () =>
   )
 }
 
-function AllCaughtUp({ onExit }: { onExit: () => void }) {
+function EmptyState({ mode, onExit }: { mode: SessionMode; onExit: () => void }) {
+  const msg =
+    mode === 'mistakes'
+      ? { icon: '🎉', title: 'No mistakes to practice!', sub: "You haven't missed anything yet. Keep it up!" }
+      : mode === 'review'
+        ? { icon: '📚', title: 'Nothing to review yet', sub: 'Play a session first, then come back to review it.' }
+        : { icon: '🌟', title: 'All caught up!', sub: 'Nothing to review right now. Come back later for more!' }
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-      <div className="text-6xl">🌟</div>
-      <h2 className="font-display text-2xl font-extrabold">All caught up!</h2>
-      <p className="text-slate-300">Nothing to review right now. Come back later for more!</p>
+      <div className="text-6xl">{msg.icon}</div>
+      <h2 className="font-display text-2xl font-extrabold">{msg.title}</h2>
+      <p className="text-slate-300">{msg.sub}</p>
       <button onClick={onExit} className="btn bg-brand-600 px-8 py-3 font-display text-lg">
         Back home
       </button>

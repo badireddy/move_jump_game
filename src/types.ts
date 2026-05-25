@@ -1,5 +1,9 @@
 export type TopicId = 'geography' | 'usstates' | 'spelling' | 'nature' | 'mythology'
 
+// How a play session sources its items: the adaptive daily mix, a free review
+// of everything learned, or a focused practice of past mistakes.
+export type SessionMode = 'daily' | 'review' | 'mistakes'
+
 export type QuizMode =
   | 'flag-to-country'
   | 'country-to-capital'
