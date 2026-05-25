@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createCard, difficultyScore, isDue, isMastered, planSession, review } from './engine'
+import { createCard, difficultyScore, hasMistake, isDue, isMastered, planSession, review, reviewIds } from './engine'
 import type { SrsCard } from '../types'
 
 const T0 = 1_700_000_000_000
@@ -44,6 +44,21 @@ describe('srs engine', () => {
     const easy: SrsCard = { ...createCard('a', T0), box: 5, history: [ev(T0, true)] }
     const hard: SrsCard = { ...createCard('b', T0), box: 1, lapses: 3, history: [ev(T0, false)] }
     expect(difficultyScore(hard)).toBeGreaterThan(difficultyScore(easy))
+  })
+
+  it('flags a card as a mistake after any wrong answer', () => {
+    let c = createCard('geo:FR', T0)
+    expect(hasMistake(c)).toBe(false)
+    c = review(c, ev(T0, false))
+    expect(hasMistake(c)).toBe(true)
+  })
+
+  it('builds a review list of learned items, mistakes-only when asked', () => {
+    const right: SrsCard = { ...createCard('geo:FR', T0), history: [ev(T0, true)] }
+    const wrong: SrsCard = { ...createCard('geo:DE', T0), lapses: 2, history: [ev(T0, false)] }
+    const cards = { 'geo:FR': right, 'geo:DE': wrong }
+    expect(reviewIds(cards).sort()).toEqual(['geo:DE', 'geo:FR'])
+    expect(reviewIds(cards, { mistakesOnly: true })).toEqual(['geo:DE'])
   })
 
   it('plans a session with due reviews and fresh items', () => {

@@ -97,6 +97,28 @@ export function planSession(
   return { reviewIds: due, newIds: fresh }
 }
 
+// True if the learner has ever missed this card — slipped on a mastered one,
+// or got it wrong at any point in its recent history.
+export function hasMistake(card: SrsCard): boolean {
+  return card.lapses > 0 || card.history.some((h) => !h.correct)
+}
+
+// Free review: already-introduced cards, hardest first, independent of the due
+// schedule — so the learner can practise anything they've seen, any time
+// (including last session or a few days back). With `mistakesOnly`, narrows to
+// cards they've gotten wrong before.
+export function reviewIds(
+  cards: Record<string, SrsCard>,
+  opts: { mistakesOnly?: boolean; max?: number } = {},
+): string[] {
+  let list = Object.values(cards)
+  if (opts.mistakesOnly) list = list.filter(hasMistake)
+  return list
+    .sort((a, b) => difficultyScore(b) - difficultyScore(a))
+    .slice(0, opts.max ?? 30)
+    .map((c) => c.itemId)
+}
+
 export interface TopicProgress {
   total: number
   introduced: number

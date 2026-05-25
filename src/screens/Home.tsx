@@ -9,6 +9,7 @@ import { BADGE_INFO } from '../content/badges'
 interface HomeProps {
   onPlayGeography: () => void
   onPlayStates: () => void
+  onOpenReview: () => void
   onOpenDashboard: () => void
   onSwitchProfile: () => void
 }
@@ -19,7 +20,7 @@ const LOCKED_TOPICS = [
   { icon: '🏛️', title: 'Greek Myths', sub: 'Gods, heroes & history' },
 ]
 
-export function Home({ onPlayGeography, onPlayStates, onOpenDashboard, onSwitchProfile }: HomeProps) {
+export function Home({ onPlayGeography, onPlayStates, onOpenReview, onOpenDashboard, onSwitchProfile }: HomeProps) {
   const current = useStore((s) => s.current())
   const family = useStore((s) => s.family)
   if (!current) return null
@@ -76,6 +77,13 @@ export function Home({ onPlayGeography, onPlayStates, onOpenDashboard, onSwitchP
           <Stat label="To review" value={`${states.due}`} highlight={states.due > 0} />
         </div>
       </motion.button>
+
+      <button
+        onClick={onOpenReview}
+        className="btn mt-3 flex items-center justify-center gap-2 bg-white/10 py-3 font-display text-base font-bold"
+      >
+        🔁 Review &amp; practice mistakes
+      </button>
 
       <div className="mt-4 grid grid-cols-1 gap-2">
         {LOCKED_TOPICS.map((t) => (
