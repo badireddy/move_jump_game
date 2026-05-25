@@ -64,6 +64,7 @@ export function StatesSession({ onExit, mode = 'daily' }: { onExit: () => void; 
         ids={plan.teachIds}
         accent={accent}
         study={mode === 'study'}
+        onHome={onExit}
         onTaught={(id) => introduce('usstates', id)}
         onDone={() => setPhase(mode === 'study' ? 'done' : 'quiz')}
       />
@@ -75,6 +76,7 @@ export function StatesSession({ onExit, mode = 'daily' }: { onExit: () => void; 
       <QuizFlow
         ids={plan.quizIds}
         accent={accent}
+        onHome={onExit}
         onAnswer={(id, ev) => recordReview('usstates', id, ev)}
         onDone={(summary) => {
           finishSession({ topic: 'usstates', newLearned: plan.newLearned, ...summary })
@@ -91,12 +93,14 @@ function TeachFlow({
   ids,
   accent,
   study = false,
+  onHome,
   onTaught,
   onDone,
 }: {
   ids: string[]
   accent: string
   study?: boolean
+  onHome: () => void
   onTaught: (id: string) => void
   onDone: () => void
 }) {
@@ -125,7 +129,7 @@ function TeachFlow({
 
   return (
     <div className="flex flex-1 flex-col">
-      <Header title={`${study ? 'Review' : 'Learn'} · ${i + 1}/${ids.length}`} onExit={onDone} exitLabel={study ? 'Done' : 'Skip to quiz'} />
+      <Header title={`${study ? 'Review' : 'Learn'} · ${i + 1}/${ids.length}`} onHome={onHome} onExit={onDone} exitLabel={study ? 'Done' : 'Skip to quiz'} />
       <motion.div key={item.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-1 flex-col items-center gap-3 p-5">
         <div className="text-center">
           <div className="font-display text-3xl font-extrabold">{item.name}</div>
@@ -161,11 +165,13 @@ interface Feedback {
 function QuizFlow({
   ids,
   accent,
+  onHome,
   onAnswer,
   onDone,
 }: {
   ids: string[]
   accent: string
+  onHome: () => void
   onAnswer: (id: string, ev: { t: number; correct: boolean; mode: QuizMode; chosenItemId?: string }) => void
   onDone: (summary: { reviewed: number; correct: number }) => void
 }) {
@@ -216,7 +222,7 @@ function QuizFlow({
   const total = queueRef.current.length
   return (
     <div className="flex flex-1 flex-col">
-      <Header title="" onExit={() => onDone({ ...tally.current })} exitLabel="End" />
+      <Header title="" onHome={onHome} onExit={() => onDone({ ...tally.current })} exitLabel="End" />
       <div className="mb-3 h-2 overflow-hidden rounded-full bg-white/10">
         <div className="h-full bg-gradient-to-r from-brand-400 to-brand-600 transition-all" style={{ width: `${(idx / total) * 100}%` }} />
       </div>
@@ -320,10 +326,13 @@ function EmptyState({ mode, onExit }: { mode: SessionMode; onExit: () => void })
   )
 }
 
-function Header({ title, onExit, exitLabel }: { title: string; onExit: () => void; exitLabel: string }) {
+function Header({ title, onHome, onExit, exitLabel }: { title: string; onHome: () => void; onExit: () => void; exitLabel: string }) {
   return (
-    <div className="flex items-center justify-between py-2">
-      <span className="font-display font-bold text-slate-300">{title}</span>
+    <div className="flex items-center justify-between gap-2 py-2">
+      <button onClick={onHome} className="flex items-center gap-1 text-sm font-semibold text-slate-300" aria-label="Back to home">
+        <span className="text-lg leading-none">←</span> Home
+      </button>
+      <span className="flex-1 text-center font-display font-bold text-slate-400">{title}</span>
       <button onClick={onExit} className="text-sm text-slate-400">
         {exitLabel}
       </button>
