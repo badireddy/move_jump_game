@@ -60,16 +60,22 @@ function TopicReview({ conf, onStart }: { conf: TopicConf; onStart: ReviewProps[
         <p className="text-sm text-slate-400">Nothing learned here yet — play a session first.</p>
       ) : (
         <>
+          <button
+            onClick={() => onStart(conf.id, 'study')}
+            className="btn mb-2 w-full bg-white/10 py-2.5 font-semibold text-white"
+          >
+            📖 Go through the clues
+          </button>
           <div className="flex gap-2">
             <button onClick={() => onStart(conf.id, 'review')} className="btn flex-1 bg-brand-600 py-2.5 font-semibold text-white">
-              Review all
+              📝 Quiz all
             </button>
             <button
               disabled={mistakes.length === 0}
               onClick={() => onStart(conf.id, 'mistakes')}
               className={`btn flex-1 py-2.5 font-semibold ${mistakes.length ? 'bg-orange-500/80 text-white' : 'bg-white/10 text-slate-500'}`}
             >
-              Practice mistakes{mistakes.length ? ` (${mistakes.length})` : ''}
+              🎯 Mistakes{mistakes.length ? ` (${mistakes.length})` : ''}
             </button>
           </div>
 
