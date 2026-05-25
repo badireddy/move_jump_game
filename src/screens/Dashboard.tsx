@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useStore } from '../state/store'
 import { COUNTRY_BY_ID } from '../content/geography/countries'
 import { difficultyScore, isMastered } from '../srs/engine'
-import { getFamilyCode } from '../data/firebase'
+import { getFamilyCode, setFamilyCode } from '../data/firebase'
 
 export function Dashboard({ onBack }: { onBack: () => void }) {
   const family = useStore((s) => s.family)
   const storageKind = useStore((s) => s.storageKind)
   const [viewId, setViewId] = useState(family.profiles[0]?.profile.id)
+  const [codeInput, setCodeInput] = useState('')
   const p = family.profiles.find((x) => x.profile.id === viewId) ?? family.profiles[0]
   if (!p) return null
 
@@ -69,12 +70,43 @@ export function Dashboard({ onBack }: { onBack: () => void }) {
       <div className="card mt-4 p-4 text-sm text-slate-300">
         <div className="font-display font-bold text-white">Sync</div>
         {storageKind === 'cloud' ? (
-          <p className="mt-1">
-            Cloud sync is on. Use this Family Code on another phone to share progress:{' '}
-            <span className="font-mono font-bold text-brand-300">{getFamilyCode()}</span>
-          </p>
+          <div className="mt-1 space-y-3">
+            <p>
+              Cloud sync is on. This device's Family Code:{' '}
+              <span className="font-mono font-bold text-brand-300">{getFamilyCode()}</span>
+            </p>
+            <div>
+              <label className="block text-xs text-slate-400">
+                Add another phone or computer: enter that family's code to share the same progress.
+              </label>
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={codeInput}
+                  onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
+                  maxLength={12}
+                  className="flex-1 rounded-lg bg-white/10 px-3 py-2 font-mono uppercase tracking-widest outline-none placeholder:tracking-normal placeholder:text-slate-500"
+                />
+                <button
+                  onClick={() => {
+                    const c = codeInput.trim()
+                    if (c.length >= 6) {
+                      setFamilyCode(c)
+                      location.reload()
+                    }
+                  }}
+                  className="btn rounded-lg bg-brand-600 px-4 py-2 font-semibold text-white"
+                >
+                  Connect
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-slate-400">
+                Use the same code everywhere. The page reloads to pull in the shared progress.
+              </p>
+            </div>
+          </div>
         ) : (
-          <p className="mt-1">Saving on this device only. Add Firebase keys to enable cross-phone sync (see README).</p>
+          <p className="mt-1">Saving on this device only. Cloud sync turns on automatically once the Firebase config is set (see README).</p>
         )}
       </div>
     </div>
