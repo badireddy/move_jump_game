@@ -13,6 +13,7 @@ export type QuizMode =
   | 'state-to-capital'
   | 'capital-to-state'
   | 'locate-state'
+  | 'spell-word'
 
 // A single learnable fact. Content is topic-specific and stored statically.
 export interface CountryItem {
@@ -32,6 +33,15 @@ export type Continent =
   | 'North America'
   | 'South America'
   | 'Oceania'
+
+// A spelling-bee word: heard aloud, then typed. Definition and example are
+// shown/spoken as hints (and disambiguate same-sounding words).
+export interface SpellingItem {
+  id: string // stable id, e.g. "spell:friend"
+  word: string
+  definition: string
+  example: string
+}
 
 // A US state fact. No flag — states are taught by name, capital, and location.
 export interface StateItem {

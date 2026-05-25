@@ -7,4 +7,6 @@ export const BADGE_INFO: Record<string, { icon: string; title: string }> = {
   'geo-master': { icon: '🗺️', title: 'Geo Master' },
   'states-explorer': { icon: '🦅', title: 'State Scout' },
   'states-master': { icon: '🇺🇸', title: 'States Master' },
+  'spelling-explorer': { icon: '🐝', title: 'Spelling Bee' },
+  'spelling-master': { icon: '📖', title: 'Spelling Master' },
 }

@@ -89,6 +89,6 @@ legacy/platformer.html     the original move+jump game (kept for reference)
 ## Roadmap
 
 - **Phase 1 — ✅ done.** All six continents (~165 countries) + US-states map, free review / study / mistakes practice, a per-topic and per-continent grown-up dashboard, and cross-device cloud sync.
-- **Phase 2** — Spelling Bee & vocabulary (uses read-aloud already wired in).
+- **Phase 2 — ✅ done.** Spelling Bee: hear a word (with its meaning and an example sentence), then type the spelling. Same SRS, review/study/mistakes modes.
 - **Phase 3** — Animals, birds & plants (image ID + sorting).
 - **Phase 4** — Greek mythology & history (story-first).

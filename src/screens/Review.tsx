@@ -2,9 +2,10 @@ import { useStore } from '../state/store'
 import type { SessionMode, SrsCard } from '../types'
 import { COUNTRY_BY_ID } from '../content/geography/countries'
 import { STATE_BY_ID } from '../content/usstates/states'
+import { SPELLING_BY_ID } from '../content/spelling/words'
 import { difficultyScore, hasMistake } from '../srs/engine'
 
-type ReviewTopic = 'geography' | 'usstates'
+type ReviewTopic = 'geography' | 'usstates' | 'spelling'
 
 interface ReviewProps {
   onStart: (topic: ReviewTopic, mode: SessionMode) => void
@@ -25,6 +26,15 @@ export function Review({ onStart, onBack }: ReviewProps) {
   const topics: TopicConf[] = [
     { id: 'geography', label: '🌍 Geography', cards: current.cards.geography ?? {}, lookup: (id) => COUNTRY_BY_ID[id] },
     { id: 'usstates', label: '🇺🇸 US States', cards: current.cards.usstates ?? {}, lookup: (id) => STATE_BY_ID[id] },
+    {
+      id: 'spelling',
+      label: '🔤 Spelling Bee',
+      cards: current.cards.spelling ?? {},
+      lookup: (id) => {
+        const w = SPELLING_BY_ID[id]
+        return w ? { name: w.word, capital: w.definition } : undefined
+      },
+    },
   ]
 
   return (
