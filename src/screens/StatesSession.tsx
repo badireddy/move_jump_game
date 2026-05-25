@@ -42,6 +42,9 @@ export function StatesSession({ onExit, mode = 'daily' }: { onExit: () => void; 
       const p = planSession(cards, ALL_IDS, Date.now(), { maxNew: 5, maxReview: 12 })
       return { teachIds: p.newIds, quizIds: [...p.newIds, ...p.reviewIds], newLearned: p.newIds.length }
     }
+    if (mode === 'study') {
+      return { teachIds: reviewIds(cards, { max: 200 }), quizIds: [] as string[], newLearned: 0 }
+    }
     const ids = reviewIds(cards, { mistakesOnly: mode === 'mistakes', max: 20 })
     return { teachIds: [] as string[], quizIds: ids, newLearned: 0 }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -60,8 +63,9 @@ export function StatesSession({ onExit, mode = 'daily' }: { onExit: () => void; 
       <TeachFlow
         ids={plan.teachIds}
         accent={accent}
+        study={mode === 'study'}
         onTaught={(id) => introduce('usstates', id)}
-        onDone={() => setPhase('quiz')}
+        onDone={() => setPhase(mode === 'study' ? 'done' : 'quiz')}
       />
     )
   }
@@ -86,11 +90,13 @@ export function StatesSession({ onExit, mode = 'daily' }: { onExit: () => void; 
 function TeachFlow({
   ids,
   accent,
+  study = false,
   onTaught,
   onDone,
 }: {
   ids: string[]
   accent: string
+  study?: boolean
   onTaught: (id: string) => void
   onDone: () => void
 }) {
@@ -119,7 +125,7 @@ function TeachFlow({
 
   return (
     <div className="flex flex-1 flex-col">
-      <Header title={`Learn · ${i + 1}/${ids.length}`} onExit={onDone} exitLabel="Skip to quiz" />
+      <Header title={`${study ? 'Review' : 'Learn'} · ${i + 1}/${ids.length}`} onExit={onDone} exitLabel={study ? 'Done' : 'Skip to quiz'} />
       <motion.div key={item.id} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="card flex flex-1 flex-col items-center gap-3 p-5">
         <div className="text-center">
           <div className="font-display text-3xl font-extrabold">{item.name}</div>
@@ -139,7 +145,7 @@ function TeachFlow({
         )}
       </motion.div>
       <button onClick={next} className="btn mt-4 bg-brand-600 py-4 font-display text-xl">
-        {i + 1 < ids.length ? 'Got it! Next' : "Let's quiz!"}
+        {i + 1 < ids.length ? (study ? 'Next' : 'Got it! Next') : study ? 'Done' : "Let's quiz!"}
       </button>
     </div>
   )
@@ -277,12 +283,16 @@ function SessionDone({ mode, newLearned, onExit }: { mode: SessionMode; newLearn
   }, [])
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
-      <div className="text-6xl">🏆</div>
-      <h2 className="font-display text-3xl font-extrabold">{mode === 'daily' ? 'Quest Complete!' : 'Great review!'}</h2>
+      <div className="text-6xl">{mode === 'study' ? '📚' : '🏆'}</div>
+      <h2 className="font-display text-3xl font-extrabold">
+        {mode === 'daily' ? 'Quest Complete!' : mode === 'study' ? 'All reviewed!' : 'Great review!'}
+      </h2>
       <p className="text-slate-300">
         {mode === 'daily'
           ? `You learned ${newLearned} new ${newLearned === 1 ? 'state' : 'states'} and earned XP!`
-          : 'Every practice makes it stick. You earned XP!'}
+          : mode === 'study'
+            ? "Nice — you went back through everything you've learned."
+            : 'Every practice makes it stick. You earned XP!'}
       </p>
       <button onClick={onExit} className="btn bg-brand-600 px-8 py-3 font-display text-lg">
         Back home
