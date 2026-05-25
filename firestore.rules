@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // One document per family, keyed by the (random, unguessable) family code.
+    // Any signed-in player (anonymous auth) who knows the code can sync.
+    // Fine for a private family app; tighten later if you add many users.
+    match /families/{code} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && code.size() >= 6
+        && request.resource.data.keys().hasAll(['version', 'profiles']);
+    }
+  }
+}
