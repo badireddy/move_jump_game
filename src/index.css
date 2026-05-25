@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: radial-gradient(1200px 800px at 50% -10%, #312e81 0%, #0f172a 55%, #020617 100%);
+  color: #e2e8f0;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+
+.font-display {
+  font-family: 'Baloo 2', system-ui, sans-serif;
+}
+
+/* App is a centered phone-width column on any screen. */
+.app-shell {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100%;
+  padding: env(safe-area-inset-top) 16px calc(env(safe-area-inset-bottom) + 16px);
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1.25rem;
+  backdrop-filter: blur(8px);
+}
+
+.btn {
+  border-radius: 1rem;
+  font-weight: 700;
+  transition: transform 0.08s ease, filter 0.15s ease;
+  user-select: none;
+}
+.btn:active {
+  transform: scale(0.96);
+}
