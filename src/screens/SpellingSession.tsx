@@ -22,14 +22,17 @@ export function SpellingSession({ onExit, mode = 'daily' }: { onExit: () => void
 
   const plan = useMemo(() => {
     const cards = current.cards.spelling ?? {}
+    // Drop any cards for words no longer in the list (e.g. after a word-set
+    // change) so a session never references a missing word.
+    const known = (ids: string[]) => ids.filter((id) => SPELLING_BY_ID[id])
     if (mode === 'daily') {
       const p = planSession(cards, ALL_IDS, Date.now(), { maxNew: 5, maxReview: 12 })
-      return { teachIds: p.newIds, quizIds: [...p.newIds, ...p.reviewIds], newLearned: p.newIds.length }
+      return { teachIds: p.newIds, quizIds: known([...p.newIds, ...p.reviewIds]), newLearned: p.newIds.length }
     }
     if (mode === 'study') {
-      return { teachIds: reviewIds(cards, { max: 200 }), quizIds: [] as string[], newLearned: 0 }
+      return { teachIds: known(reviewIds(cards, { max: 200 })), quizIds: [] as string[], newLearned: 0 }
     }
-    const ids = reviewIds(cards, { mistakesOnly: mode === 'mistakes', max: 20 })
+    const ids = known(reviewIds(cards, { mistakesOnly: mode === 'mistakes', max: 20 }))
     return { teachIds: [] as string[], quizIds: ids, newLearned: 0 }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

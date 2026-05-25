@@ -55,7 +55,8 @@ export function Review({ onStart, onBack }: ReviewProps) {
 }
 
 function TopicReview({ conf, onStart }: { conf: TopicConf; onStart: ReviewProps['onStart'] }) {
-  const cards = Object.values(conf.cards)
+  // Ignore cards whose item is no longer in the content set.
+  const cards = Object.values(conf.cards).filter((c) => conf.lookup(c.itemId))
   const learned = cards.length
   const mistakes = cards.filter(hasMistake).sort((a, b) => difficultyScore(b) - difficultyScore(a))
 
