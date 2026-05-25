@@ -1,10 +1,13 @@
-export type TopicId = 'geography' | 'spelling' | 'nature' | 'mythology'
+export type TopicId = 'geography' | 'usstates' | 'spelling' | 'nature' | 'mythology'
 
 export type QuizMode =
   | 'flag-to-country'
   | 'country-to-capital'
   | 'capital-to-country'
   | 'locate-on-map'
+  | 'state-to-capital'
+  | 'capital-to-state'
+  | 'locate-state'
 
 // A single learnable fact. Content is topic-specific and stored statically.
 export interface CountryItem {
@@ -24,6 +27,16 @@ export type Continent =
   | 'North America'
   | 'South America'
   | 'Oceania'
+
+// A US state fact. No flag — states are taught by name, capital, and location.
+export interface StateItem {
+  id: string // stable id, e.g. "us:CA"
+  code: string // USPS 2-letter code, e.g. "CA"
+  name: string
+  capital: string
+  // Optional alias used to match this state to a map geography feature name.
+  mapName?: string
+}
 
 // --- Spaced repetition ---
 export interface SrsCard {

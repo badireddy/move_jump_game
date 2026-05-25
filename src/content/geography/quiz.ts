@@ -1,8 +1,13 @@
 import type { CountryItem, QuizMode } from '../../types'
 import { COUNTRIES, COUNTRY_BY_ID } from './countries'
 
+export type GeoMode = Extract<
+  QuizMode,
+  'flag-to-country' | 'country-to-capital' | 'capital-to-country' | 'locate-on-map'
+>
+
 export interface GeoQuestion {
-  mode: QuizMode
+  mode: GeoMode
   item: CountryItem
   options: CountryItem[] // 4 options for multiple-choice modes; empty for map mode
 }
@@ -35,9 +40,9 @@ function distractors(target: CountryItem, count = 3): CountryItem[] {
   return shuffle(sameContinent).concat(shuffle(rest)).slice(0, count)
 }
 
-const MC_MODES: QuizMode[] = ['flag-to-country', 'country-to-capital', 'capital-to-country']
+const MC_MODES: GeoMode[] = ['flag-to-country', 'country-to-capital', 'capital-to-country']
 
-function modeFor(item: CountryItem, allowMap: boolean): QuizMode {
+function modeFor(item: CountryItem, allowMap: boolean): GeoMode {
   if (allowMap && LOCATABLE.has(item.iso2) && Math.random() < 0.3) return 'locate-on-map'
   return pick(MC_MODES)
 }

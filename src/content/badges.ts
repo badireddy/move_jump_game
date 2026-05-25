@@ -5,4 +5,6 @@ export const BADGE_INFO: Record<string, { icon: string; title: string }> = {
   'correct-200': { icon: '🌟', title: '200 Correct' },
   'geo-explorer': { icon: '🧭', title: 'Explorer' },
   'geo-master': { icon: '🗺️', title: 'Geo Master' },
+  'states-explorer': { icon: '🦅', title: 'State Scout' },
+  'states-master': { icon: '🇺🇸', title: 'States Master' },
 }
