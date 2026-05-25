@@ -18,6 +18,8 @@ const LOCATABLE = new Set([
   'us', 'ca', 'mx', 'br', 'ar', 'cl', 'pe', 'co', 've', 'fr', 'de', 'it', 'es', 'pt', 'gb',
   'no', 'se', 'fi', 'pl', 'ua', 'ru', 'cn', 'jp', 'in', 'kr', 'kp', 'id', 'th', 'vn', 'sa',
   'ir', 'iq', 'kz', 'eg', 'ng', 'za', 'ke', 'et', 'ma', 'dz', 'ly', 'au', 'nz', 'pk', 'tr',
+  'mn', 'af', 'ao', 'mz', 'zm', 'bw', 'na', 'ml', 'ne', 'td', 'sd', 'so', 'cm', 'uz', 'tm',
+  'mm', 'mg', 'cd',
 ])
 
 function shuffle<T>(arr: T[]): T[] {
